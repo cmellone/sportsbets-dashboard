@@ -3,137 +3,242 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bet Tracker</title>
+<title>House of Mellone</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0a0a0a; --surface: #141414; --card: #1a1a1a; --border: #2a2a2a;
-    --text: #f0f0f0; --muted: #888; --green: #4ade80; --red: #f87171;
-    --amber: #fbbf24; --blue: #60a5fa; --purple: #a78bfa;
-    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
-  .app { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
-  .header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
-  .header h1 span { color: var(--green); }
-  .updated { font-size: 0.75rem; color: var(--muted); }
-  .tabs { display: flex; gap: 2px; background: var(--surface); border-radius: 10px; padding: 3px; border: 1px solid var(--border); }
-  .tab { padding: 6px 16px; font-size: 0.8rem; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; background: transparent; color: var(--muted); transition: all 0.15s; }
-  .tab.active { background: var(--card); color: var(--text); }
-  .section { display: none; }
-  .section.active { display: block; }
-  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
-  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
-  .metric-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-  .metric-value { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.03em; }
-  .green { color: var(--green); } .red { color: var(--red); } .amber { color: var(--amber); }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem; }
-  .card-title { font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.25rem; }
-  .leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .leaderboard-row:last-child { border-bottom: none; }
-  .rank { width: 20px; font-size: 0.8rem; font-weight: 700; color: var(--muted); text-align: center; }
-  .rank.g { color: #fbbf24; } .rank.s { color: #94a3b8; } .rank.b { color: #cd7c40; }
-  .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
-  .bettor-info { flex: 1; min-width: 0; }
-  .bettor-name { font-size: 0.9rem; font-weight: 600; }
-  .bettor-record { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
-  .bettor-bar { height: 3px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 6px; }
-  .bettor-bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
-  .bettor-pnl { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; flex-shrink: 0; }
-  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-  .win-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .win-bar-label { font-size: 0.78rem; color: var(--muted); width: 80px; flex-shrink: 0; }
-  .win-bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
-  .win-bar-fill { height: 100%; border-radius: 99px; }
-  .win-bar-pct { font-size: 0.75rem; font-weight: 600; width: 34px; text-align: right; color: var(--text); }
-  .bets-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-  .bets-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); font-weight: 500; }
-  .bets-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  .bets-table tr:last-child td { border-bottom: none; }
-  .bets-table tr:hover td { background: rgba(255,255,255,0.02); }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 0.68rem; font-weight: 600; }
-  .badge-win { background: rgba(74,222,128,0.15); color: var(--green); }
-  .badge-loss { background: rgba(248,113,113,0.15); color: var(--red); }
-  .badge-pending { background: rgba(251,191,36,0.15); color: var(--amber); }
-  .badge-push { background: rgba(255,255,255,0.08); color: var(--muted); }
-  .badge-straight { background: rgba(96,165,250,0.15); color: var(--blue); }
-  .badge-parlay { background: rgba(167,139,250,0.15); color: var(--purple); }
-  .badge-teaser { background: rgba(251,191,36,0.15); color: var(--amber); }
-  .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
-  select, input { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 6px 10px; font-size: 0.78rem; font-family: var(--font); outline: none; }
-  select:focus, input:focus { border-color: #444; }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .form-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
-  .form-group input, .form-group select, .form-group textarea { width: 100%; }
-  textarea { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; font-family: var(--font); resize: none; height: 72px; outline: none; }
-  .btn { background: #f0f0f0; color: #000; border: none; border-radius: 10px; padding: 10px 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; width: 100%; margin-top: 14px; transition: opacity 0.15s; }
-  .btn:hover { opacity: 0.85; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .status { font-size: 0.75rem; text-align: center; margin-top: 8px; min-height: 18px; }
-  .status.ok { color: var(--green); } .status.err { color: var(--red); }
-  .empty { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; }
-  .loading { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; }
-  .desc-main { font-weight: 500; color: var(--text); }
-  .desc-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
-  @media (max-width: 600px) {
-    .chart-grid { grid-template-columns: 1fr; }
-    .form-grid { grid-template-columns: 1fr; }
-    .bets-table .hide-mobile { display: none; }
-  }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080808;--surface:#111;--card:#161616;--border:#222;--border2:#2a2a2a;
+  --text:#f0f0f0;--muted:#666;--muted2:#888;--green:#4ade80;--red:#f87171;
+  --amber:#fbbf24;--blue:#60a5fa;--purple:#a78bfa;--gold:#d4af37;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+.app{max-width:1020px;margin:0 auto;padding:1.5rem 1rem 5rem}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-icon{width:36px;height:36px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:900;color:#000;letter-spacing:-0.05em;flex-shrink:0}
+.brand h1{font-size:1.1rem;font-weight:700;letter-spacing:-0.02em;color:var(--text)}
+.brand h1 span{color:var(--gold)}
+.brand-sub{font-size:0.7rem;color:var(--muted2);margin-top:1px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.updated{font-size:0.72rem;color:var(--muted);white-space:nowrap}
+.tabs{display:flex;gap:2px;background:var(--surface);border-radius:10px;padding:3px;border:1px solid var(--border)}
+.tab{padding:6px 14px;font-size:0.78rem;font-weight:500;border:none;border-radius:7px;cursor:pointer;background:transparent;color:var(--muted2);transition:all 0.15s}
+.tab.active{background:var(--card);color:var(--text)}
+
+/* SECTIONS */
+.section{display:none}.section.active{display:block}
+
+/* BETTOR FILTER */
+.bettor-filter{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap}
+.bf-btn{padding:5px 14px;font-size:0.78rem;font-weight:500;border:1px solid var(--border2);border-radius:99px;cursor:pointer;background:transparent;color:var(--muted2);transition:all 0.15s}
+.bf-btn.active{background:var(--gold);color:#000;border-color:var(--gold)}
+
+/* METRICS */
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem}
+.metric-label{font-size:0.65rem;color:var(--muted2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px}
+.metric-value{font-size:1.5rem;font-weight:700;letter-spacing:-0.03em}
+.metric-sub{font-size:0.68rem;color:var(--muted2);margin-top:3px}
+.green{color:var(--green)}.red{color:var(--red)}.amber{color:var(--amber)}.gold{color:var(--gold)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:0.65rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:1.1rem}
+.card-row{display:flex;gap:1rem;margin-bottom:1rem}
+.card-row .card{flex:1;margin-bottom:0}
+
+/* LEADERBOARD */
+.lb-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;border-radius:8px;padding-left:4px;padding-right:4px}
+.lb-row:last-child{border-bottom:none}
+.lb-row:hover{background:rgba(255,255,255,0.02)}
+.rank{width:22px;font-size:0.78rem;font-weight:700;color:var(--muted);text-align:center;flex-shrink:0}
+.rank.g{color:#fbbf24}.rank.s{color:#94a3b8}.rank.b{color:#cd7c40}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:800;flex-shrink:0}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-size:0.88rem;font-weight:700;display:flex;align-items:center;gap:6px}
+.lb-record{font-size:0.7rem;color:var(--muted2);margin-top:2px}
+.lb-bar{height:3px;background:var(--border2);border-radius:99px;overflow:hidden;margin-top:6px}
+.lb-bar-fill{height:100%;border-radius:99px;transition:width 0.6s ease}
+.lb-right{text-align:right;flex-shrink:0}
+.lb-pnl{font-size:1rem;font-weight:800;letter-spacing:-0.02em}
+.lb-roi{font-size:0.68rem;color:var(--muted2);margin-top:2px}
+.streak-badge{font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:99px;white-space:nowrap}
+.streak-w{background:rgba(74,222,128,0.15);color:var(--green)}
+.streak-l{background:rgba(248,113,113,0.15);color:var(--red)}
+
+/* WIN BARS */
+.win-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.win-bar-label{font-size:0.76rem;color:var(--muted2);width:72px;flex-shrink:0}
+.win-bar-track{flex:1;height:6px;background:var(--border2);border-radius:99px;overflow:hidden}
+.win-bar-fill{height:100%;border-radius:99px}
+.win-bar-pct{font-size:0.72rem;font-weight:700;width:32px;text-align:right}
+
+/* HIGHLIGHT CARDS */
+.highlight-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.highlight{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem}
+.highlight-label{font-size:0.62rem;color:var(--muted2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px}
+.highlight-val{font-size:0.88rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.highlight-sub{font-size:0.68rem;color:var(--muted2);margin-top:3px}
+
+/* PENDING */
+.pending-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.pending-row:last-child{border-bottom:none}
+.pending-dot{width:7px;height:7px;border-radius:50%;background:var(--amber);flex-shrink:0}
+.pending-info{flex:1;min-width:0}
+.pending-desc{font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pending-sub{font-size:0.68rem;color:var(--muted2);margin-top:2px}
+.pending-stake{font-size:0.82rem;font-weight:600;color:var(--amber);flex-shrink:0}
+
+/* BETS TABLE */
+.filter-row{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+select,input{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:0.76rem;font-family:var(--font);outline:none}
+select:focus,input:focus{border-color:#444}
+.bets-table{width:100%;border-collapse:collapse;font-size:0.79rem}
+.bets-table th{text-align:left;padding:8px 12px;color:var(--muted2);font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);font-weight:600;cursor:pointer;user-select:none}
+.bets-table th:hover{color:var(--text)}
+.bets-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.bets-table tr:last-child td{border-bottom:none}
+.tr-win td{background:rgba(74,222,128,0.03)}
+.tr-loss td{background:rgba(248,113,113,0.03)}
+.bets-table tr:hover td{background:rgba(255,255,255,0.025)!important}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:0.66rem;font-weight:700}
+.badge-win{background:rgba(74,222,128,0.15);color:var(--green)}
+.badge-loss{background:rgba(248,113,113,0.15);color:var(--red)}
+.badge-pending{background:rgba(251,191,36,0.15);color:var(--amber)}
+.badge-push{background:rgba(255,255,255,0.08);color:var(--muted2)}
+.badge-straight{background:rgba(96,165,250,0.12);color:var(--blue)}
+.badge-parlay{background:rgba(167,139,250,0.12);color:var(--purple)}
+.badge-teaser{background:rgba(251,191,36,0.12);color:var(--amber)}
+.desc-main{font-weight:500}
+.desc-sub{font-size:0.68rem;color:var(--muted2);margin-top:2px}
+.pnl-cell{font-weight:700;font-size:0.82rem}
+
+/* ADD BET FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-group label{display:block;font-size:0.68rem;color:var(--muted2);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.07em}
+.form-group input,.form-group select,.form-group textarea{width:100%}
+textarea{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-size:0.8rem;font-family:var(--font);resize:none;height:68px;outline:none}
+.btn{background:var(--gold);color:#000;border:none;border-radius:10px;padding:10px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;width:100%;margin-top:14px;transition:opacity 0.15s}
+.btn:hover{opacity:0.88}.btn:disabled{opacity:0.4;cursor:not-allowed}
+.status{font-size:0.75rem;text-align:center;margin-top:8px;min-height:18px}
+.status.ok{color:var(--green)}.status.err{color:var(--red)}
+
+/* MISC */
+.empty{text-align:center;padding:2.5rem;color:var(--muted);font-size:0.84rem}
+.loading{text-align:center;padding:3rem;color:var(--muted);font-size:0.84rem}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.sort-arrow{opacity:0.4;font-size:0.65rem;margin-left:3px}
+.sort-arrow.active{opacity:1}
+
+@media(max-width:640px){
+  .two-col{grid-template-columns:1fr}
+  .highlight-grid{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .bets-table .hm{display:none}
+  .card-row{flex-direction:column}
+}
 </style>
 </head>
 <body>
 <div class="app">
+
   <div class="header">
-    <div>
-      <h1>Bet <span>Tracker</span></h1>
-      <div class="updated" id="updated">Loading...</div>
+    <div class="brand">
+      <div class="brand-icon">M</div>
+      <div>
+        <h1>House of <span>Mellone</span></h1>
+        <div class="brand-sub">Private Betting Club</div>
+      </div>
     </div>
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('overview')">Overview</button>
-      <button class="tab" onclick="switchTab('bets')">All Bets</button>
-      <button class="tab" onclick="switchTab('add')">+ Add Bet</button>
+    <div class="header-right">
+      <div class="updated" id="updated">Loading...</div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('overview')">Overview</button>
+        <button class="tab" onclick="switchTab('bets')">All Bets</button>
+        <button class="tab" onclick="switchTab('add')">+ Add Bet</button>
+      </div>
     </div>
   </div>
 
+  <!-- OVERVIEW -->
   <div id="tab-overview" class="section active">
-    <div id="overview-loading" class="loading">Loading dashboard...</div>
+    <div id="overview-loading" class="loading">Loading House of Mellone...</div>
     <div id="overview-content" style="display:none">
+
+      <div class="bettor-filter" id="bettor-filter">
+        <button class="bf-btn active" onclick="setBettorFilter(null,this)">Everyone</button>
+      </div>
+
       <div class="metric-grid" id="group-metrics"></div>
+
       <div class="card">
         <div class="card-title">Leaderboard</div>
         <div id="leaderboard"></div>
       </div>
-      <div class="chart-grid">
-        <div class="card"><div class="card-title">Win rate by type</div><div id="type-bars"></div></div>
-        <div class="card"><div class="card-title">Win rate by sport</div><div id="sport-bars"></div></div>
+
+      <div class="highlight-grid" id="highlights"></div>
+
+      <div id="pending-card"></div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Win rate by type</div>
+          <div id="type-bars"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Win rate by sport</div>
+          <div id="sport-bars"></div>
+        </div>
       </div>
+
+      <div class="card">
+        <div class="card-title">Cumulative P&L over time</div>
+        <div style="position:relative;height:200px"><canvas id="trend-chart" role="img" aria-label="Cumulative P&L trend line chart"></canvas></div>
+      </div>
+
       <div class="card">
         <div class="card-title">P&L by bettor</div>
-        <div style="position:relative;height:180px"><canvas id="pnl-chart" role="img" aria-label="P&L by bettor bar chart"></canvas></div>
+        <div style="position:relative;height:160px"><canvas id="pnl-chart" role="img" aria-label="P&L by bettor bar chart"></canvas></div>
       </div>
+
     </div>
   </div>
 
+  <!-- ALL BETS -->
   <div id="tab-bets" class="section">
     <div class="filter-row">
       <select id="f-bettor" onchange="renderBets()"><option value="">All bettors</option></select>
       <select id="f-type" onchange="renderBets()"><option value="">All types</option><option>straight</option><option>parlay</option><option>teaser</option></select>
       <select id="f-result" onchange="renderBets()"><option value="">All results</option><option>win</option><option>loss</option><option>pending</option><option>push</option></select>
       <select id="f-sport" onchange="renderBets()"><option value="">All sports</option></select>
+      <select id="f-period" onchange="renderBets()">
+        <option value="">All time</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+      </select>
     </div>
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card" style="padding:0;overflow:hidden;overflow-x:auto">
       <table class="bets-table">
         <thead><tr>
-          <th>Bet</th><th class="hide-mobile">Type</th><th>Result</th><th class="hide-mobile">Odds</th><th>Stake</th>
+          <th onclick="sortBets('description')">Bet <span class="sort-arrow" id="sort-description">↕</span></th>
+          <th class="hm" onclick="sortBets('bet_type')">Type <span class="sort-arrow" id="sort-bet_type">↕</span></th>
+          <th onclick="sortBets('result')">Result <span class="sort-arrow" id="sort-result">↕</span></th>
+          <th class="hm" onclick="sortBets('odds')">Odds <span class="sort-arrow" id="sort-odds">↕</span></th>
+          <th onclick="sortBets('stake')">Stake <span class="sort-arrow" id="sort-stake">↕</span></th>
+          <th class="hm" onclick="sortBets('pnl')">P&L <span class="sort-arrow" id="sort-pnl">↕</span></th>
+          <th class="hm" onclick="sortBets('bet_date')">Date <span class="sort-arrow" id="sort-bet_date">↕</span></th>
         </tr></thead>
-        <tbody id="bets-body"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+        <tbody id="bets-body"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
       </table>
     </div>
   </div>
 
+  <!-- ADD BET -->
   <div id="tab-add" class="section">
     <div class="card">
       <div class="card-title">Log a new bet</div>
@@ -148,175 +253,316 @@
         <div class="form-group"><label>Payout ($)</label><input type="number" id="a-payout" step="0.01" placeholder="0.00"></div>
       </div>
       <div style="margin-top:10px">
-        <div class="form-group"><label>Description</label><textarea id="a-desc" placeholder="Chiefs -3.5 vs Raiders..."></textarea></div>
+        <div class="form-group"><label>Description</label><textarea id="a-desc" placeholder="Chiefs -3.5 vs Raiders, Game 1 o/u 220.5..."></textarea></div>
         <div class="form-group" style="margin-top:10px"><label>Result</label><select id="a-result"><option value="pending">Pending</option><option value="win">Win</option><option value="loss">Loss</option><option value="push">Push</option></select></div>
       </div>
       <button class="btn" id="submit-btn" onclick="submitBet()">Log Bet</button>
       <div class="status" id="submit-status"></div>
     </div>
   </div>
+
 </div>
-
 <script>
-const SUPA_URL = 'https://wvgkeurfzgrtvxusaoha.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2Z2tldXJmemdydHZ4dXNhb2hhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzI5NzQsImV4cCI6MjA5Nzc0ODk3NH0.v_xx8mhw_6h7RHm0i0ey2HI-1JSDPpne9UDKjt9DRRQ';
-const H = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+const SUPA_URL='https://wvgkeurfzgrtvxusaoha.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2Z2tldXJmemdydHZ4dXNhb2hhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzI5NzQsImV4cCI6MjA5Nzc0ODk3NH0.v_xx8mhw_6h7RHm0i0ey2HI-1JSDPpne9UDKjt9DRRQ';
+const H={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+const AVATAR=[['#1a2a1a','#4ade80'],['#1a1a2e','#60a5fa'],['#2a1a2a','#a78bfa'],['#2a1a1a','#f87171']];
 
-let bettors = [], bets = [], pnlChart = null;
-const AVATAR_COLORS = [['#1a2e1a','#4ade80'],['#1a1a2e','#60a5fa'],['#2e1a2e','#a78bfa']];
+let bettors=[],bets=[],pnlChart=null,trendChart=null,activeBettor=null,sortCol='bet_date',sortDir=-1;
 
-async function fetchAll() {
-  const [bR, betR] = await Promise.all([
-    fetch(`${SUPA_URL}/rest/v1/bettors?select=*&order=created_at.asc`, {headers:H}),
-    fetch(`${SUPA_URL}/rest/v1/bets?select=*,bettors(name)&order=bet_date.desc,created_at.desc`, {headers:H})
+async function fetchAll(){
+  const[bR,betR]=await Promise.all([
+    fetch(`${SUPA_URL}/rest/v1/bettors?select=*&order=created_at.asc`,{headers:H}),
+    fetch(`${SUPA_URL}/rest/v1/bets?select=*,bettors(name)&order=bet_date.asc,created_at.asc`,{headers:H})
   ]);
-  bettors = await bR.json();
-  bets = await betR.json();
-  document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  bettors=await bR.json();
+  bets=await betR.json();
+  document.getElementById('updated').textContent='Updated '+new Date().toLocaleTimeString();
   populateFilters();
   renderOverview();
   renderBets();
 }
 
-function calcStats(subset) {
-  const wins = subset.filter(b => b.result === 'win').length;
-  const losses = subset.filter(b => b.result === 'loss').length;
-  const settled = wins + losses + subset.filter(b => b.result === 'push').length;
-  const pending = subset.filter(b => b.result === 'pending').length;
-  const pnl = subset.reduce((acc, b) => {
-    if (b.result === 'win') return acc + (parseFloat(b.payout||0) - parseFloat(b.stake||0));
-    if (b.result === 'loss') return acc - parseFloat(b.stake||0);
+function calcStats(subset){
+  const wins=subset.filter(b=>b.result==='win').length;
+  const losses=subset.filter(b=>b.result==='loss').length;
+  const pushes=subset.filter(b=>b.result==='push').length;
+  const settled=wins+losses+pushes;
+  const pending=subset.filter(b=>b.result==='pending').length;
+  const totalStaked=subset.filter(b=>b.result!=='pending').reduce((a,b)=>a+parseFloat(b.stake||0),0);
+  const pnl=subset.reduce((acc,b)=>{
+    if(b.result==='win')return acc+(parseFloat(b.payout||0)-parseFloat(b.stake||0));
+    if(b.result==='loss')return acc-parseFloat(b.stake||0);
     return acc;
-  }, 0);
-  return { wins, losses, pending, pnl, winRate: settled > 0 ? Math.round(wins/settled*100) : 0, total: subset.length };
+  },0);
+  const roi=totalStaked>0?((pnl/totalStaked)*100):0;
+  const winRate=settled>0?Math.round(wins/settled*100):0;
+  // streak
+  const settled_bets=subset.filter(b=>b.result==='win'||b.result==='loss').slice().reverse();
+  let streak=0,streakType='';
+  if(settled_bets.length){
+    streakType=settled_bets[0].result;
+    for(const b of settled_bets){if(b.result===streakType)streak++;else break;}
+  }
+  return{wins,losses,pushes,pending,pnl,roi,winRate,total:subset.length,settled,totalStaked,streak,streakType};
 }
 
-function populateFilters() {
-  const fb = document.getElementById('f-bettor');
-  const ab = document.getElementById('a-bettor');
-  bettors.forEach(b => {
-    fb.innerHTML += `<option value="${b.id}">${b.name}</option>`;
-    ab.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+function getFiltered(){
+  if(!activeBettor)return bets;
+  return bets.filter(b=>b.bettor_id===activeBettor);
+}
+
+function populateFilters(){
+  const fb=document.getElementById('f-bettor');
+  const ab=document.getElementById('a-bettor');
+  const bf=document.getElementById('bettor-filter');
+  bettors.forEach(b=>{
+    fb.innerHTML+=`<option value="${b.id}">${b.name}</option>`;
+    ab.innerHTML+=`<option value="${b.id}">${b.name}</option>`;
+    bf.innerHTML+=`<button class="bf-btn" onclick="setBettorFilter('${b.id}',this)">${b.name}</button>`;
   });
-  const sports = [...new Set(bets.map(b => b.sport).filter(Boolean))].sort();
-  document.getElementById('f-sport').innerHTML += sports.map(s => `<option>${s}</option>`).join('');
-  document.getElementById('a-date').value = new Date().toISOString().split('T')[0];
+  const sports=[...new Set(bets.map(b=>b.sport).filter(Boolean))].sort();
+  const fs=document.getElementById('f-sport');
+  sports.forEach(s=>fs.innerHTML+=`<option>${s}</option>`);
+  document.getElementById('a-date').value=new Date().toISOString().split('T')[0];
 }
 
-function renderOverview() {
-  const s = calcStats(bets);
-  document.getElementById('group-metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">Total bets</div><div class="metric-value">${s.total}</div></div>
-    <div class="metric"><div class="metric-label">Group P&L</div><div class="metric-value ${s.pnl>=0?'green':'red'}">${s.pnl>=0?'+':''}$${Math.abs(s.pnl).toFixed(2)}</div></div>
-    <div class="metric"><div class="metric-label">Win rate</div><div class="metric-value">${s.winRate}%</div></div>
-    <div class="metric"><div class="metric-label">Pending</div><div class="metric-value amber">${s.pending}</div></div>
+function setBettorFilter(id,el){
+  activeBettor=id;
+  document.querySelectorAll('.bf-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderOverview();
+}
+
+function renderOverview(){
+  const filtered=getFiltered();
+  const s=calcStats(filtered);
+  document.getElementById('group-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Total bets</div><div class="metric-value">${s.total}</div><div class="metric-sub">${s.settled} settled · ${s.pending} pending</div></div>
+    <div class="metric"><div class="metric-label">${activeBettor?'P&L':'Group P&L'}</div><div class="metric-value ${s.pnl>=0?'green':'red'}">${s.pnl>=0?'+':''}$${Math.abs(s.pnl).toFixed(2)}</div><div class="metric-sub">ROI: ${s.roi>=0?'+':''}${s.roi.toFixed(1)}%</div></div>
+    <div class="metric"><div class="metric-label">Win rate</div><div class="metric-value">${s.winRate}%</div><div class="metric-sub">${s.wins}W – ${s.losses}L${s.pushes?' – '+s.pushes+'P':''}</div></div>
+    <div class="metric"><div class="metric-label">Current streak</div><div class="metric-value ${s.streakType==='win'?'green':s.streakType==='loss'?'red':'amber'}">${s.streak?s.streak+(s.streakType==='win'?'W':'L'):'—'}</div><div class="metric-sub">${s.streak>2?'🔥 On fire':'Keep grinding'}</div></div>
   `;
-  const sorted = [...bettors].map(b => ({ b, s: calcStats(bets.filter(x => x.bettor_id === b.id)) })).sort((a,b) => b.s.pnl - a.s.pnl);
-  const maxAbs = Math.max(...sorted.map(x => Math.abs(x.s.pnl)), 1);
-  document.getElementById('leaderboard').innerHTML = sorted.map(({b, s}, i) => {
-    const [bg, fg] = AVATAR_COLORS[bettors.indexOf(b) % AVATAR_COLORS.length];
-    const rankClass = i===0?'g':i===1?'s':'b';
-    const pnlClass = s.pnl>0?'green':s.pnl<0?'red':'';
-    const barColor = s.pnl>=0?'#4ade80':'#f87171';
-    const barW = Math.round(Math.abs(s.pnl)/maxAbs*100);
-    return `<div class="leaderboard-row">
-      <span class="rank ${rankClass}">#${i+1}</span>
+
+  const allSorted=[...bettors].map(b=>({b,s:calcStats(bets.filter(x=>x.bettor_id===b.id))})).sort((a,b)=>b.s.pnl-a.s.pnl);
+  const maxAbs=Math.max(...allSorted.map(x=>Math.abs(x.s.pnl)),1);
+  document.getElementById('leaderboard').innerHTML=allSorted.map(({b,s},i)=>{
+    const[bg,fg]=AVATAR[bettors.indexOf(b)%AVATAR.length];
+    const rc=i===0?'g':i===1?'s':'b';
+    const pc=s.pnl>0?'green':s.pnl<0?'red':'';
+    const bw=Math.round(Math.abs(s.pnl)/maxAbs*100);
+    const streakHtml=s.streak>=2?`<span class="streak-badge streak-${s.streakType}">${s.streak}${s.streakType==='win'?'W':'L'}</span>`:'';
+    return`<div class="lb-row">
+      <span class="rank ${rc}">#${i+1}</span>
       <div class="avatar" style="background:${bg};color:${fg}">${b.name.slice(0,2).toUpperCase()}</div>
-      <div class="bettor-info">
-        <div class="bettor-name">${b.name}</div>
-        <div class="bettor-record">${s.wins}W – ${s.losses}L · ${s.winRate}% · ${s.total} bets</div>
-        <div class="bettor-bar"><div class="bettor-bar-fill" style="width:${barW}%;background:${barColor}"></div></div>
+      <div class="lb-info">
+        <div class="lb-name">${b.name} ${streakHtml}</div>
+        <div class="lb-record">${s.wins}W – ${s.losses}L · ${s.winRate}% · ${s.total} bets</div>
+        <div class="lb-bar"><div class="lb-bar-fill" style="width:${bw}%;background:${s.pnl>=0?'#4ade80':'#f87171'}"></div></div>
       </div>
-      <div class="bettor-pnl ${pnlClass}">${s.pnl>=0?'+':''}$${Math.abs(s.pnl).toFixed(2)}</div>
+      <div class="lb-right">
+        <div class="lb-pnl ${pc}">${s.pnl>=0?'+':''}$${Math.abs(s.pnl).toFixed(2)}</div>
+        <div class="lb-roi">ROI ${s.roi>=0?'+':''}${s.roi.toFixed(1)}%</div>
+      </div>
     </div>`;
-  }).join('') || '<div class="empty">No bets yet.</div>';
-  renderWinBars('type-bars', ['Straight','Parlay','Teaser'], t => bets.filter(b => b.bet_type===t.toLowerCase()), ['#60a5fa','#a78bfa','#fbbf24']);
-  const sports = [...new Set(bets.map(b => b.sport).filter(Boolean))].slice(0,6);
-  renderWinBars('sport-bars', sports, s => bets.filter(b => b.sport===s), ['#4ade80','#60a5fa','#fbbf24','#a78bfa','#f87171','#34d399']);
-  renderPnlChart(sorted);
-  document.getElementById('overview-loading').style.display = 'none';
-  document.getElementById('overview-content').style.display = 'block';
+  }).join('')||'<div class="empty">No bets yet.</div>';
+
+  // highlights
+  const settled=filtered.filter(b=>b.result==='win'||b.result==='loss');
+  let bigWin=null,bigLoss=null;
+  settled.forEach(b=>{
+    const pnl=b.result==='win'?parseFloat(b.payout||0)-parseFloat(b.stake||0):-parseFloat(b.stake||0);
+    if(!bigWin||pnl>bigWin.pnl)bigWin={...b,pnl};
+    if(!bigLoss||pnl<bigLoss.pnl)bigLoss={...b,pnl};
+  });
+  document.getElementById('highlights').innerHTML=`
+    <div class="highlight">
+      <div class="highlight-label">🏆 Biggest win</div>
+      <div class="highlight-val green">${bigWin?'+$'+bigWin.pnl.toFixed(2):'—'}</div>
+      <div class="highlight-sub">${bigWin?(bigWin.description||bigWin.sport||'—').slice(0,40):'No wins yet'}</div>
+    </div>
+    <div class="highlight">
+      <div class="highlight-label">💸 Biggest loss</div>
+      <div class="highlight-val red">${bigLoss&&bigLoss.pnl<0?'$'+bigLoss.pnl.toFixed(2):'—'}</div>
+      <div class="highlight-sub">${bigLoss&&bigLoss.pnl<0?(bigLoss.description||bigLoss.sport||'—').slice(0,40):'No losses yet'}</div>
+    </div>
+  `;
+
+  // pending bets
+  const pending=filtered.filter(b=>b.result==='pending').slice(0,5);
+  document.getElementById('pending-card').innerHTML=pending.length?`
+    <div class="card">
+      <div class="card-title">⏳ Live & Pending (${pending.length})</div>
+      ${pending.map(b=>`<div class="pending-row">
+        <div class="pending-dot"></div>
+        <div class="pending-info">
+          <div class="pending-desc">${b.description||b.sport||'—'}</div>
+          <div class="pending-sub">${b.bettors?.name||''} · ${b.sport||''} · ${b.odds?(b.odds>0?'+':'')+b.odds:''}</div>
+        </div>
+        <div class="pending-stake">$${parseFloat(b.stake||0).toFixed(2)}</div>
+      </div>`).join('')}
+    </div>`:'';
+
+  renderWinBars('type-bars',['Straight','Parlay','Teaser'],t=>filtered.filter(b=>b.bet_type===t.toLowerCase()),['#60a5fa','#a78bfa','#fbbf24']);
+  const sports=[...new Set(filtered.map(b=>b.sport).filter(Boolean))].slice(0,6);
+  renderWinBars('sport-bars',sports,sp=>filtered.filter(b=>b.sport===sp),['#4ade80','#60a5fa','#fbbf24','#a78bfa','#f87171','#34d399']);
+
+  renderTrendChart(filtered);
+  renderPnlChart(allSorted);
+
+  document.getElementById('overview-loading').style.display='none';
+  document.getElementById('overview-content').style.display='block';
 }
 
-function renderWinBars(id, labels, filterFn, colors) {
-  document.getElementById(id).innerHTML = labels.map((label, i) => {
-    const subset = filterFn(label);
-    if (!subset.length) return '';
-    const s = calcStats(subset);
-    return `<div class="win-bar-row">
-      <span class="win-bar-label">${label}</span>
+function renderWinBars(id,labels,fn,colors){
+  document.getElementById(id).innerHTML=labels.map((l,i)=>{
+    const sub=fn(l);if(!sub.length)return'';
+    const s=calcStats(sub);
+    return`<div class="win-bar-row">
+      <span class="win-bar-label">${l}</span>
       <div class="win-bar-track"><div class="win-bar-fill" style="width:${s.winRate}%;background:${colors[i%colors.length]}"></div></div>
-      <span class="win-bar-pct">${s.winRate}%</span>
+      <span class="win-bar-pct" style="color:${colors[i%colors.length]}">${s.winRate}%</span>
     </div>`;
-  }).join('') || '<div class="empty" style="padding:1rem">No data yet</div>';
+  }).join('')||'<div class="empty" style="padding:1rem;font-size:0.8rem">No data yet</div>';
 }
 
-function renderPnlChart(sorted) {
-  const ctx = document.getElementById('pnl-chart').getContext('2d');
-  const data = sorted.map(x => parseFloat(x.s.pnl.toFixed(2)));
-  const colors = data.map(v => v>=0?'rgba(74,222,128,0.8)':'rgba(248,113,113,0.8)');
-  if (pnlChart) pnlChart.destroy();
-  pnlChart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: sorted.map(x => x.b.name), datasets: [{ data, backgroundColor: colors, borderRadius: 6, borderSkipped: false }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => '$'+v, font: { size: 11 } } },
-        x: { grid: { display: false }, ticks: { color: '#888', font: { size: 12 } } }
+function renderTrendChart(filtered){
+  const ctx=document.getElementById('trend-chart').getContext('2d');
+  const sorted=[...filtered].filter(b=>b.result!=='pending').sort((a,b)=>new Date(a.bet_date)-new Date(b.bet_date));
+  const bettorLines={};
+  if(activeBettor){
+    const b=bettors.find(x=>x.id===activeBettor);
+    bettorLines[b.id]={name:b.name,data:[],cumPnl:0};
+  } else {
+    bettors.forEach(b=>bettorLines[b.id]={name:b.name,data:[],cumPnl:0});
+  }
+  sorted.forEach(bet=>{
+    const bl=bettorLines[bet.bettor_id];if(!bl)return;
+    const pnl=bet.result==='win'?parseFloat(bet.payout||0)-parseFloat(bet.stake||0):-parseFloat(bet.stake||0);
+    bl.cumPnl+=pnl;
+    bl.data.push({x:bet.bet_date,y:parseFloat(bl.cumPnl.toFixed(2))});
+  });
+  const lineColors=['#4ade80','#60a5fa','#a78bfa','#f87171'];
+  const datasets=Object.values(bettorLines).filter(b=>b.data.length).map((b,i)=>({
+    label:b.name,data:b.data,borderColor:lineColors[i%lineColors.length],
+    backgroundColor:'transparent',tension:0.3,pointRadius:2,borderWidth:2
+  }));
+  if(trendChart)trendChart.destroy();
+  trendChart=new Chart(ctx,{
+    type:'line',
+    data:{datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      parsing:{xAxisKey:'x',yAxisKey:'y'},
+      plugins:{legend:{display:datasets.length>1,labels:{color:'#888',font:{size:11},boxWidth:12}}},
+      scales:{
+        x:{type:'category',grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#555',font:{size:10},maxTicksLimit:8}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#555',callback:v=>'$'+v,font:{size:10}}}
       }
     }
   });
 }
 
-function renderBets() {
-  const bf = document.getElementById('f-bettor').value;
-  const tf = document.getElementById('f-type').value;
-  const rf = document.getElementById('f-result').value;
-  const sf = document.getElementById('f-sport').value;
-  const filtered = bets.filter(b => (!bf||b.bettor_id===bf)&&(!tf||b.bet_type===tf)&&(!rf||b.result===rf)&&(!sf||b.sport===sf));
-  if (!filtered.length) { document.getElementById('bets-body').innerHTML = '<tr><td colspan="5" class="empty">No bets match your filters.</td></tr>'; return; }
-  document.getElementById('bets-body').innerHTML = filtered.map(b => `
-    <tr>
-      <td><div class="desc-main">${b.description||'—'}</div><div class="desc-sub">${b.bettors?.name||''} · ${b.sport||''} · ${b.bet_date||''}</div></td>
-      <td class="hide-mobile"><span class="badge badge-${b.bet_type||'straight'}">${b.bet_type||'—'}</span></td>
-      <td><span class="badge badge-${b.result||'pending'}">${b.result||'pending'}</span></td>
-      <td class="hide-mobile" style="color:#888">${b.odds?(b.odds>0?'+':'')+b.odds:'—'}</td>
-      <td style="color:#888">$${parseFloat(b.stake||0).toFixed(2)}</td>
-    </tr>`).join('');
+function renderPnlChart(sorted){
+  const ctx=document.getElementById('pnl-chart').getContext('2d');
+  const data=sorted.map(x=>parseFloat(x.s.pnl.toFixed(2)));
+  const colors=data.map(v=>v>=0?'rgba(74,222,128,0.8)':'rgba(248,113,113,0.8)');
+  if(pnlChart)pnlChart.destroy();
+  pnlChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels:sorted.map(x=>x.b.name),datasets:[{data,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#555',callback:v=>'$'+v,font:{size:10}}},
+        x:{grid:{display:false},ticks:{color:'#888',font:{size:12}}}
+      }
+    }
+  });
 }
 
-async function submitBet() {
-  const btn = document.getElementById('submit-btn');
-  const status = document.getElementById('submit-status');
-  const bettorId = document.getElementById('a-bettor').value;
-  const stake = parseFloat(document.getElementById('a-stake').value)||0;
-  const sport = document.getElementById('a-sport').value.trim();
-  if (!bettorId||!stake||!sport) { status.textContent='Please fill in bettor, sport, and stake.'; status.className='status err'; return; }
-  btn.disabled=true; status.textContent='Saving...'; status.className='status';
-  const payload = {
-    bettor_id: bettorId, sportsbook: document.getElementById('a-book').value,
-    bet_type: document.getElementById('a-type').value, sport,
-    description: document.getElementById('a-desc').value.trim(),
-    odds: parseInt(document.getElementById('a-odds').value)||null,
-    stake, payout: parseFloat(document.getElementById('a-payout').value)||null,
-    result: document.getElementById('a-result').value,
-    bet_date: document.getElementById('a-date').value
+function betPnl(b){
+  if(b.result==='win')return parseFloat(b.payout||0)-parseFloat(b.stake||0);
+  if(b.result==='loss')return-parseFloat(b.stake||0);
+  return null;
+}
+
+function sortBets(col){
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}
+  document.querySelectorAll('.sort-arrow').forEach(el=>{el.textContent='↕';el.classList.remove('active')});
+  const el=document.getElementById('sort-'+col);
+  if(el){el.textContent=sortDir===1?'↑':'↓';el.classList.add('active');}
+  renderBets();
+}
+
+function renderBets(){
+  const bf=document.getElementById('f-bettor').value;
+  const tf=document.getElementById('f-type').value;
+  const rf=document.getElementById('f-result').value;
+  const sf=document.getElementById('f-sport').value;
+  const pf=parseInt(document.getElementById('f-period').value)||0;
+  const cutoff=pf?new Date(Date.now()-pf*86400000):null;
+  let filtered=[...bets].filter(b=>
+    (!bf||b.bettor_id===bf)&&(!tf||b.bet_type===tf)&&
+    (!rf||b.result===rf)&&(!sf||b.sport===sf)&&
+    (!cutoff||new Date(b.bet_date)>=cutoff)
+  );
+  filtered.sort((a,b2)=>{
+    let av,bv;
+    if(sortCol==='pnl'){av=betPnl(a)??-9999;bv=betPnl(b2)??-9999;}
+    else if(sortCol==='stake'){av=parseFloat(a.stake||0);bv=parseFloat(b2.stake||0);}
+    else if(sortCol==='odds'){av=parseInt(a.odds||0);bv=parseInt(b2.odds||0);}
+    else{av=(a[sortCol]||'').toString();bv=(b2[sortCol]||'').toString();}
+    return av<bv?-sortDir:av>bv?sortDir:0;
+  });
+  if(!filtered.length){document.getElementById('bets-body').innerHTML='<tr><td colspan="7" class="empty">No bets match your filters.</td></tr>';return;}
+  document.getElementById('bets-body').innerHTML=filtered.map(b=>{
+    const pnl=betPnl(b);
+    const pnlStr=pnl!==null?(pnl>=0?'<span class="pnl-cell green">+$'+pnl.toFixed(2)+'</span>':'<span class="pnl-cell red">$'+pnl.toFixed(2)+'</span>'):'<span style="color:#444">—</span>';
+    const trClass=b.result==='win'?'tr-win':b.result==='loss'?'tr-loss':'';
+    return`<tr class="${trClass}">
+      <td><div class="desc-main">${b.description||'—'}</div><div class="desc-sub">${b.bettors?.name||''} · ${b.sport||''}</div></td>
+      <td class="hm"><span class="badge badge-${b.bet_type||'straight'}">${b.bet_type||'—'}</span></td>
+      <td><span class="badge badge-${b.result||'pending'}">${b.result||'pending'}</span></td>
+      <td class="hm" style="color:#666">${b.odds?(b.odds>0?'+':'')+b.odds:'—'}</td>
+      <td style="color:#888">$${parseFloat(b.stake||0).toFixed(2)}</td>
+      <td class="hm">${pnlStr}</td>
+      <td class="hm" style="color:#555;font-size:0.72rem">${b.bet_date||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function submitBet(){
+  const btn=document.getElementById('submit-btn');
+  const status=document.getElementById('submit-status');
+  const bettorId=document.getElementById('a-bettor').value;
+  const stake=parseFloat(document.getElementById('a-stake').value)||0;
+  const sport=document.getElementById('a-sport').value.trim();
+  if(!bettorId||!stake||!sport){status.textContent='Please fill in bettor, sport, and stake.';status.className='status err';return;}
+  btn.disabled=true;status.textContent='Saving...';status.className='status';
+  const payload={
+    bettor_id:bettorId,sportsbook:document.getElementById('a-book').value,
+    bet_type:document.getElementById('a-type').value,sport,
+    description:document.getElementById('a-desc').value.trim(),
+    odds:parseInt(document.getElementById('a-odds').value)||null,
+    stake,payout:parseFloat(document.getElementById('a-payout').value)||null,
+    result:document.getElementById('a-result').value,
+    bet_date:document.getElementById('a-date').value
   };
-  const res = await fetch(`${SUPA_URL}/rest/v1/bets`, { method:'POST', headers:{...H,'Prefer':'return=minimal'}, body:JSON.stringify(payload) });
+  const res=await fetch(`${SUPA_URL}/rest/v1/bets`,{method:'POST',headers:{...H,'Prefer':'return=minimal'},body:JSON.stringify(payload)});
   btn.disabled=false;
-  if (res.ok) {
-    status.textContent='Bet logged!'; status.className='status ok';
-    ['a-desc','a-stake','a-payout','a-odds'].forEach(id => document.getElementById(id).value='');
+  if(res.ok){
+    status.textContent='Bet logged!';status.className='status ok';
+    ['a-desc','a-stake','a-payout','a-odds'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('a-result').value='pending';
     await fetchAll();
-  } else { status.textContent='Error saving. Try again.'; status.className='status err'; }
+  }else{status.textContent='Error saving. Try again.';status.className='status err';}
 }
 
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',['overview','bets','add'][i]===name));
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['overview','bets','add'][i]===name));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
 }
 
