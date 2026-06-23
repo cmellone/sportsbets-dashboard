@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bet Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0a; --surface: #141414; --card: #1a1a1a; --border: #2a2a2a;
+    --text: #f0f0f0; --muted: #888; --green: #4ade80; --red: #f87171;
+    --amber: #fbbf24; --blue: #60a5fa; --purple: #a78bfa;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+  .app { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+  .header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+  .header h1 span { color: var(--green); }
+  .updated { font-size: 0.75rem; color: var(--muted); }
+  .tabs { display: flex; gap: 2px; background: var(--surface); border-radius: 10px; padding: 3px; border: 1px solid var(--border); }
+  .tab { padding: 6px 16px; font-size: 0.8rem; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; background: transparent; color: var(--muted); transition: all 0.15s; }
+  .tab.active { background: var(--card); color: var(--text); }
+  .section { display: none; }
+  .section.active { display: block; }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
+  .metric-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .metric-value { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.03em; }
+  .green { color: var(--green); } .red { color: var(--red); } .amber { color: var(--amber); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem; }
+  .card-title { font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.25rem; }
+  .leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .leaderboard-row:last-child { border-bottom: none; }
+  .rank { width: 20px; font-size: 0.8rem; font-weight: 700; color: var(--muted); text-align: center; }
+  .rank.g { color: #fbbf24; } .rank.s { color: #94a3b8; } .rank.b { color: #cd7c40; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+  .bettor-info { flex: 1; min-width: 0; }
+  .bettor-name { font-size: 0.9rem; font-weight: 600; }
+  .bettor-record { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .bettor-bar { height: 3px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+  .bettor-bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+  .bettor-pnl { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; flex-shrink: 0; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .win-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .win-bar-label { font-size: 0.78rem; color: var(--muted); width: 80px; flex-shrink: 0; }
+  .win-bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .win-bar-fill { height: 100%; border-radius: 99px; }
+  .win-bar-pct { font-size: 0.75rem; font-weight: 600; width: 34px; text-align: right; color: var(--text); }
+  .bets-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .bets-table th { text-align: left; padding: 8px 10px; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); font-weight: 500; }
+  .bets-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .bets-table tr:last-child td { border-bottom: none; }
+  .bets-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 0.68rem; font-weight: 600; }
+  .badge-win { background: rgba(74,222,128,0.15); color: var(--green); }
+  .badge-loss { background: rgba(248,113,113,0.15); color: var(--red); }
+  .badge-pending { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .badge-push { background: rgba(255,255,255,0.08); color: var(--muted); }
+  .badge-straight { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .badge-parlay { background: rgba(167,139,250,0.15); color: var(--purple); }
+  .badge-teaser { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+  select, input { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 6px 10px; font-size: 0.78rem; font-family: var(--font); outline: none; }
+  select:focus, input:focus { border-color: #444; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; }
+  textarea { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; font-family: var(--font); resize: none; height: 72px; outline: none; }
+  .btn { background: #f0f0f0; color: #000; border: none; border-radius: 10px; padding: 10px 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; width: 100%; margin-top: 14px; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status { font-size: 0.75rem; text-align: center; margin-top: 8px; min-height: 18px; }
+  .status.ok { color: var(--green); } .status.err { color: var(--red); }
+  .empty { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; }
+  .loading { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; }
+  .desc-main { font-weight: 500; color: var(--text); }
+  .desc-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  @media (max-width: 600px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .bets-table .hide-mobile { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <h1>Bet <span>Tracker</span></h1>
+      <div class="updated" id="updated">Loading...</div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('overview')">Overview</button>
+      <button class="tab" onclick="switchTab('bets')">All Bets</button>
+      <button class="tab" onclick="switchTab('add')">+ Add Bet</button>
+    </div>
+  </div>
+
+  <div id="tab-overview" class="section active">
+    <div id="overview-loading" class="loading">Loading dashboard...</div>
+    <div id="overview-content" style="display:none">
+      <div class="metric-grid" id="group-metrics"></div>
+      <div class="card">
+        <div class="card-title">Leaderboard</div>
+        <div id="leaderboard"></div>
+      </div>
+      <div class="chart-grid">
+        <div class="card"><div class="card-title">Win rate by type</div><div id="type-bars"></div></div>
+        <div class="card"><div class="card-title">Win rate by sport</div><div id="sport-bars"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">P&L by bettor</div>
+        <div style="position:relative;height:180px"><canvas id="pnl-chart" role="img" aria-label="P&L by bettor bar chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-bets" class="section">
+    <div class="filter-row">
+      <select id="f-bettor" onchange="renderBets()"><option value="">All bettors</option></select>
+      <select id="f-type" onchange="renderBets()"><option value="">All types</option><option>straight</option><option>parlay</option><option>teaser</option></select>
+      <select id="f-result" onchange="renderBets()"><option value="">All results</option><option>win</option><option>loss</option><option>pending</option><option>push</option></select>
+      <select id="f-sport" onchange="renderBets()"><option value="">All sports</option></select>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="bets-table">
+        <thead><tr>
+          <th>Bet</th><th class="hide-mobile">Type</th><th>Result</th><th class="hide-mobile">Odds</th><th>Stake</th>
+        </tr></thead>
+        <tbody id="bets-body"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-add" class="section">
+    <div class="card">
+      <div class="card-title">Log a new bet</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Bettor</label><select id="a-bettor"></select></div>
+        <div class="form-group"><label>Date</label><input type="date" id="a-date"></div>
+        <div class="form-group"><label>Sportsbook</label><select id="a-book"><option>William Hill</option><option>Bovada</option><option>Other</option></select></div>
+        <div class="form-group"><label>Bet type</label><select id="a-type"><option value="straight">Straight</option><option value="parlay">Parlay</option><option value="teaser">Teaser</option></select></div>
+        <div class="form-group"><label>Sport</label><input type="text" id="a-sport" placeholder="NFL, NBA, MMA..."></div>
+        <div class="form-group"><label>American odds</label><input type="number" id="a-odds" placeholder="-110 or +250"></div>
+        <div class="form-group"><label>Stake ($)</label><input type="number" id="a-stake" step="0.01" placeholder="0.00"></div>
+        <div class="form-group"><label>Payout ($)</label><input type="number" id="a-payout" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="form-group"><label>Description</label><textarea id="a-desc" placeholder="Chiefs -3.5 vs Raiders..."></textarea></div>
+        <div class="form-group" style="margin-top:10px"><label>Result</label><select id="a-result"><option value="pending">Pending</option><option value="win">Win</option><option value="loss">Loss</option><option value="push">Push</option></select></div>
+      </div>
+      <button class="btn" id="submit-btn" onclick="submitBet()">Log Bet</button>
+      <div class="status" id="submit-status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://wvgkeurfzgrtvxusaoha.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2Z2tldXJmemdydHZ4dXNhb2hhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzI5NzQsImV4cCI6MjA5Nzc0ODk3NH0.v_xx8mhw_6h7RHm0i0ey2HI-1JSDPpne9UDKjt9DRRQ';
+const H = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+
+let bettors = [], bets = [], pnlChart = null;
+const AVATAR_COLORS = [['#1a2e1a','#4ade80'],['#1a1a2e','#60a5fa'],['#2e1a2e','#a78bfa']];
+
+async function fetchAll() {
+  const [bR, betR] = await Promise.all([
+    fetch(`${SUPA_URL}/rest/v1/bettors?select=*&order=created_at.asc`, {headers:H}),
+    fetch(`${SUPA_URL}/rest/v1/bets?select=*,bettors(name)&order=bet_date.desc,created_at.desc`, {headers:H})
+  ]);
+  bettors = await bR.json();
+  bets = await betR.json();
+  document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  populateFilters();
+  renderOverview();
+  renderBets();
+}
+
+function calcStats(subset) {
+  const wins = subset.filter(b => b.result === 'win').length;
+  const losses = subset.filter(b => b.result === 'loss').length;
+  const settled = wins + losses + subset.filter(b => b.result === 'push').length;
+  const pending = subset.filter(b => b.result === 'pending').length;
+  const pnl = subset.reduce((acc, b) => {
+    if (b.result === 'win') return acc + (parseFloat(b.payout||0) - parseFloat(b.stake||0));
+    if (b.result === 'loss') return acc - parseFloat(b.stake||0);
+    return acc;
+  }, 0);
+  return { wins, losses, pending, pnl, winRate: settled > 0 ? Math.round(wins/settled*100) : 0, total: subset.length };
+}
+
+function populateFilters() {
+  const fb = document.getElementById('f-bettor');
+  const ab = document.getElementById('a-bettor');
+  bettors.forEach(b => {
+    fb.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+    ab.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+  });
+  const sports = [...new Set(bets.map(b => b.sport).filter(Boolean))].sort();
+  document.getElementById('f-sport').innerHTML += sports.map(s => `<option>${s}</option>`).join('');
+  document.getElementById('a-date').value = new Date().toISOString().split('T')[0];
+}
+
+function renderOverview() {
+  const s = calcStats(bets);
+  document.getElementById('group-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total bets</div><div class="metric-value">${s.total}</div></div>
+    <div class="metric"><div class="metric-label">Group P&L</div><div class="metric-value ${s.pnl>=0?'green':'red'}">${s.pnl>=0?'+':''}$${Math.abs(s.pnl).toFixed(2)}</div></div>
+    <div class="metric"><div class="metric-label">Win rate</div><div class="metric-value">${s.winRate}%</div></div>
+    <div class="metric"><div class="metric-label">Pending</div><div class="metric-value amber">${s.pending}</div></div>
+  `;
+  const sorted = [...bettors].map(b => ({ b, s: calcStats(bets.filter(x => x.bettor_id === b.id)) })).sort((a,b) => b.s.pnl - a.s.pnl);
+  const maxAbs = Math.max(...sorted.map(x => Math.abs(x.s.pnl)), 1);
+  document.getElementById('leaderboard').innerHTML = sorted.map(({b, s}, i) => {
+    const [bg, fg] = AVATAR_COLORS[bettors.indexOf(b) % AVATAR_COLORS.length];
+    const rankClass = i===0?'g':i===1?'s':'b';
+    const pnlClass = s.pnl>0?'green':s.pnl<0?'red':'';
+    const barColor = s.pnl>=0?'#4ade80':'#f87171';
+    const barW = Math.round(Math.abs(s.pnl)/maxAbs*100);
+    return `<div class="leaderboard-row">
+      <span class="rank ${rankClass}">#${i+1}</span>
+      <div class="avatar" style="background:${bg};color:${fg}">${b.name.slice(0,2).toUpperCase()}</div>
+      <div class="bettor-info">
+        <div class="bettor-name">${b.name}</div>
+        <div class="bettor-record">${s.wins}W – ${s.losses}L · ${s.winRate}% · ${s.total} bets</div>
+        <div class="bettor-bar"><div class="bettor-bar-fill" style="width:${barW}%;background:${barColor}"></div></div>
+      </div>
+      <div class="bettor-pnl ${pnlClass}">${s.pnl>=0?'+':''}$${Math.abs(s.pnl).toFixed(2)}</div>
+    </div>`;
+  }).join('') || '<div class="empty">No bets yet.</div>';
+  renderWinBars('type-bars', ['Straight','Parlay','Teaser'], t => bets.filter(b => b.bet_type===t.toLowerCase()), ['#60a5fa','#a78bfa','#fbbf24']);
+  const sports = [...new Set(bets.map(b => b.sport).filter(Boolean))].slice(0,6);
+  renderWinBars('sport-bars', sports, s => bets.filter(b => b.sport===s), ['#4ade80','#60a5fa','#fbbf24','#a78bfa','#f87171','#34d399']);
+  renderPnlChart(sorted);
+  document.getElementById('overview-loading').style.display = 'none';
+  document.getElementById('overview-content').style.display = 'block';
+}
+
+function renderWinBars(id, labels, filterFn, colors) {
+  document.getElementById(id).innerHTML = labels.map((label, i) => {
+    const subset = filterFn(label);
+    if (!subset.length) return '';
+    const s = calcStats(subset);
+    return `<div class="win-bar-row">
+      <span class="win-bar-label">${label}</span>
+      <div class="win-bar-track"><div class="win-bar-fill" style="width:${s.winRate}%;background:${colors[i%colors.length]}"></div></div>
+      <span class="win-bar-pct">${s.winRate}%</span>
+    </div>`;
+  }).join('') || '<div class="empty" style="padding:1rem">No data yet</div>';
+}
+
+function renderPnlChart(sorted) {
+  const ctx = document.getElementById('pnl-chart').getContext('2d');
+  const data = sorted.map(x => parseFloat(x.s.pnl.toFixed(2)));
+  const colors = data.map(v => v>=0?'rgba(74,222,128,0.8)':'rgba(248,113,113,0.8)');
+  if (pnlChart) pnlChart.destroy();
+  pnlChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: sorted.map(x => x.b.name), datasets: [{ data, backgroundColor: colors, borderRadius: 6, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => '$'+v, font: { size: 11 } } },
+        x: { grid: { display: false }, ticks: { color: '#888', font: { size: 12 } } }
+      }
+    }
+  });
+}
+
+function renderBets() {
+  const bf = document.getElementById('f-bettor').value;
+  const tf = document.getElementById('f-type').value;
+  const rf = document.getElementById('f-result').value;
+  const sf = document.getElementById('f-sport').value;
+  const filtered = bets.filter(b => (!bf||b.bettor_id===bf)&&(!tf||b.bet_type===tf)&&(!rf||b.result===rf)&&(!sf||b.sport===sf));
+  if (!filtered.length) { document.getElementById('bets-body').innerHTML = '<tr><td colspan="5" class="empty">No bets match your filters.</td></tr>'; return; }
+  document.getElementById('bets-body').innerHTML = filtered.map(b => `
+    <tr>
+      <td><div class="desc-main">${b.description||'—'}</div><div class="desc-sub">${b.bettors?.name||''} · ${b.sport||''} · ${b.bet_date||''}</div></td>
+      <td class="hide-mobile"><span class="badge badge-${b.bet_type||'straight'}">${b.bet_type||'—'}</span></td>
+      <td><span class="badge badge-${b.result||'pending'}">${b.result||'pending'}</span></td>
+      <td class="hide-mobile" style="color:#888">${b.odds?(b.odds>0?'+':'')+b.odds:'—'}</td>
+      <td style="color:#888">$${parseFloat(b.stake||0).toFixed(2)}</td>
+    </tr>`).join('');
+}
+
+async function submitBet() {
+  const btn = document.getElementById('submit-btn');
+  const status = document.getElementById('submit-status');
+  const bettorId = document.getElementById('a-bettor').value;
+  const stake = parseFloat(document.getElementById('a-stake').value)||0;
+  const sport = document.getElementById('a-sport').value.trim();
+  if (!bettorId||!stake||!sport) { status.textContent='Please fill in bettor, sport, and stake.'; status.className='status err'; return; }
+  btn.disabled=true; status.textContent='Saving...'; status.className='status';
+  const payload = {
+    bettor_id: bettorId, sportsbook: document.getElementById('a-book').value,
+    bet_type: document.getElementById('a-type').value, sport,
+    description: document.getElementById('a-desc').value.trim(),
+    odds: parseInt(document.getElementById('a-odds').value)||null,
+    stake, payout: parseFloat(document.getElementById('a-payout').value)||null,
+    result: document.getElementById('a-result').value,
+    bet_date: document.getElementById('a-date').value
+  };
+  const res = await fetch(`${SUPA_URL}/rest/v1/bets`, { method:'POST', headers:{...H,'Prefer':'return=minimal'}, body:JSON.stringify(payload) });
+  btn.disabled=false;
+  if (res.ok) {
+    status.textContent='Bet logged!'; status.className='status ok';
+    ['a-desc','a-stake','a-payout','a-odds'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('a-result').value='pending';
+    await fetchAll();
+  } else { status.textContent='Error saving. Try again.'; status.className='status err'; }
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',['overview','bets','add'][i]===name));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+fetchAll();
+</script>
+</body>
+</html>
