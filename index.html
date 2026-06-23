@@ -339,14 +339,20 @@ function getF(){return activeBettor?bets.filter(b=>b.bettor_id===activeBettor):b
 
 function populateFilters(){
   const fb=document.getElementById("f-bettor"),ab=document.getElementById("a-bettor"),bf=document.getElementById("bettor-filter");
+  // Clear existing options/buttons before repopulating to prevent duplicates on refresh
+  fb.innerHTML="<option value=''>All bettors</option>";
+  ab.innerHTML="";
+  bf.innerHTML=`<button class="sport-pill ${!activeBettor?'active':''}" onclick="setBettorFilter(null,this)">🏠 Group</button>`;
   bettors.forEach(b=>{
     fb.innerHTML+=`<option value="${b.id}">${b.name}</option>`;
     ab.innerHTML+=`<option value="${b.id}">${b.name}</option>`;
-    bf.innerHTML+=`<button class="sport-pill" onclick="setBettorFilter('${b.id}',this)">${b.name}</button>`;
+    bf.innerHTML+=`<button class="sport-pill ${activeBettor===b.id?'active':''}" onclick="setBettorFilter('${b.id}',this)">${b.name}</button>`;
   });
   const sp=[...new Set(bets.map(b=>b.sport).filter(Boolean))].sort();
   const fs=document.getElementById("f-sport");
-  sp.forEach(s=>fs.innerHTML+=`<option>${s}</option>`);
+  const curSport=fs.value;
+  fs.innerHTML="<option value=''>All sports</option>";
+  sp.forEach(s=>fs.innerHTML+=`<option${s===curSport?" selected":""}>${s}</option>`);
   document.getElementById("a-date").value=new Date().toISOString().split("T")[0];
 }
 
