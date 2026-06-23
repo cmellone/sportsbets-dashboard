@@ -445,14 +445,11 @@ function rWinBars(id,labels,fn,colors){
 function renderTrend(f){
   const ctx=document.getElementById("trend-chart").getContext("2d");
   const sorted=[...f].filter(b=>b.result!=="pending").sort((a,b)=>{
-  const d=new Date(a.bet_date)-new Date(b.bet_date);
-  if(d!==0)return d;
-  if(a.created_at&&b.created_at)return new Date(a.created_at)-new Date(b.created_at);
-  return(a.id||"").localeCompare(b.id||"");
-});
-  const d=new Date(a.bet_date)-new Date(b.bet_date);
-  return d!==0?d:new Date(a.created_at)-new Date(b.created_at);
-});
+    const d=new Date(a.bet_date)-new Date(b.bet_date);
+    if(d!==0)return d;
+    if(a.created_at&&b.created_at)return new Date(a.created_at)-new Date(b.created_at);
+    return(a.id||"").localeCompare(b.id||"");
+  });
   const lines={};
   if(activeBettor){const b=bettors.find(x=>x.id===activeBettor);lines[b.id]={name:b.name,data:[],cum:0};}
   else bettors.forEach(b=>lines[b.id]={name:b.name,data:[],cum:0});
@@ -460,9 +457,9 @@ function renderTrend(f){
     const bl=lines[bet.bettor_id];if(!bl)return;
     const p=bet.result==="win"?parseFloat(bet.payout||0)-parseFloat(bet.stake||0):-parseFloat(bet.stake||0);
     bl.cum+=p;
-const last=bl.data[bl.data.length-1];
-if(last&&last.x===bet.bet_date){last.y=parseFloat(bl.cum.toFixed(2));}
-else{bl.data.push({x:bet.bet_date,y:parseFloat(bl.cum.toFixed(2))});}
+    const last=bl.data[bl.data.length-1];
+    if(last&&last.x===bet.bet_date){last.y=parseFloat(bl.cum.toFixed(2));}
+    else{bl.data.push({x:bet.bet_date,y:parseFloat(bl.cum.toFixed(2))});}
   });
   const lc=["#22c55e","#3b82f6","#8b5cf6","#ef4444"];
   const ds=Object.values(lines).filter(b=>b.data.length).map((b,i)=>({
