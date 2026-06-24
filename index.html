@@ -266,11 +266,11 @@ textarea:focus{border-color:var(--border2)}
         <th class="hm" onclick="sortBets('bet_type')">Type <span class="sort-icon" id="si-bet_type">↕</span></th>
         <th onclick="sortBets('result')">Result <span class="sort-icon" id="si-result">↕</span></th>
         <th class="hm" onclick="sortBets('odds')">Odds <span class="sort-icon" id="si-odds">↕</span></th>
-        <th onclick="sortBets('stake')">Stake <span class="sort-icon" id="si-stake">↕</span></th>
-        <th class="hm" onclick="sortBets('pnl')">P&L <span class="sort-icon" id="si-pnl">↕</span></th>
+        <th onclick="sortBets('pnl')">P&L <span class="sort-icon" id="si-pnl">↕</span></th>
+        
         <th class="hm" onclick="sortBets('bet_date')">Date <span class="sort-icon" id="si-bet_date">↕</span></th>
       </tr></thead>
-      <tbody id="bets-body"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+      <tbody id="bets-body"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -532,18 +532,19 @@ function renderBets(){
     else{av=(a[sortCol]||"").toString();bv=(b2[sortCol]||"").toString();}
     return av<bv?-sortDir:av>bv?sortDir:0;
   });
-  if(!f.length){document.getElementById("bets-body").innerHTML=`<tr><td colspan="7" class="empty">No bets match filters.</td></tr>`;return;}
+  if(!f.length){document.getElementById("bets-body").innerHTML=`<tr><td colspan="6" class="empty">No bets match filters.</td></tr>`;return;}
   document.getElementById("bets-body").innerHTML=f.map(b=>{
     const pnl=betPnl(b);
-    const pnlStr=pnl!==null?(pnl>=0?`<span class="pnl-pos">+$${pnl.toFixed(2)}</span>`:`<span class="pnl-neg">$${pnl.toFixed(2)}</span>`):`<span style="color:#3f3f46">—</span>`;
+    const pnlAbs=pnl!==null?Math.abs(pnl):null;
+    const pnlStr=pnl!==null?(pnl>0?`<span class="pnl-pos">+$${pnlAbs.toFixed(2)}</span>`:pnl<0?`<span class="pnl-neg">-$${pnlAbs.toFixed(2)}</span>`:`<span style="color:#52525b">$0.00</span>`):`<span style="color:#3f3f46">—</span>`;
     const rc=b.result==="win"?"tr-win":b.result==="loss"?"tr-loss":b.result==="pending"?"tr-pending":"";
     return`<tr class="${rc}">
       <td><div class="desc-main">${b.description||"—"}</div><div class="desc-sub">${b.bettors?.name||""} · ${b.sport||""}</div></td>
       <td class="hm"><span class="badge badge-${b.bet_type||"straight"}">${b.bet_type||"—"}</span></td>
       <td><span class="badge badge-${b.result||"pending"}">${b.result||"pending"}</span></td>
       <td class="hm" style="color:#52525b;font-weight:600">${b.odds?(b.odds>0?"+":"")+b.odds:"—"}</td>
-      <td style="color:#a1a1aa;font-weight:500">$${parseFloat(b.stake||0).toFixed(2)}</td>
-      <td class="hm">${pnlStr}</td>
+      
+      <td>${pnlStr}</td>
       <td class="hm" style="color:#52525b;font-size:0.72rem">${b.bet_date||"—"}</td>
     </tr>`;
   }).join("");
