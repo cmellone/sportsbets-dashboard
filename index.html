@@ -268,15 +268,11 @@ textarea:focus{border-color:var(--border2)}
   <div class="table-wrap">
     <table class="bets-table">
       <thead><tr>
-        <th onclick="sortBets('description')">Bet <span class="sort-icon" id="si-description">↕</span></th>
-        <th class="hm" onclick="sortBets('bet_type')">Type <span class="sort-icon" id="si-bet_type">↕</span></th>
-        <th onclick="sortBets('result')">Result <span class="sort-icon" id="si-result">↕</span></th>
-        <th class="hm" onclick="sortBets('odds')">Odds <span class="sort-icon" id="si-odds">↕</span></th>
-        <th onclick="sortBets('pnl')">P&L <span class="sort-icon" id="si-pnl">↕</span></th>
-        
-        <th class="hm" onclick="sortBets('bet_date')">Date <span class="sort-icon" id="si-bet_date">↕</span></th>
+        <th onclick="sortBets('description')" colspan="3">Bet / Result / P&L <span class="sort-icon" id="si-description">↕</span></th>
+        <th onclick="sortBets('bet_date')" class="hm">Date <span class="sort-icon" id="si-bet_date">↕</span></th>
+        <th onclick="sortBets('stake')" class="hm">Stake <span class="sort-icon" id="si-stake">↕</span></th>
       </tr></thead>
-      <tbody id="bets-body"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+      <tbody id="bets-body"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -538,42 +534,43 @@ function renderBets(){
     else{av=(a[sortCol]||"").toString();bv=(b2[sortCol]||"").toString();}
     return av<bv?-sortDir:av>bv?sortDir:0;
   });
-  if(!f.length){document.getElementById("bets-body").innerHTML=`<tr><td colspan="6" class="empty">No bets match filters.</td></tr>`;return;}
+  if(!f.length){document.getElementById("bets-body").innerHTML=`<tr><td colspan="5" class="empty">No bets match filters.</td></tr>`;return;}
   document.getElementById("bets-body").innerHTML=f.map(b=>{
     const pnl=betPnl(b);
     const pnlAbs=pnl!==null?Math.abs(pnl):null;
     const pnlStr=pnl!==null?(pnl>0?`<span class="pnl-pos">+$${pnlAbs.toFixed(2)}</span>`:pnl<0?`<span class="pnl-neg">-$${pnlAbs.toFixed(2)}</span>`:`<span style="color:#52525b">$0.00</span>`):`<span style="color:#3f3f46">—</span>`;
     const rc=b.result==="win"?"tr-win":b.result==="loss"?"tr-loss":b.result==="pending"?"tr-pending":"";
-    const uid=(b.id||Math.random().toString(36).slice(2)).replace(/-/g,'');
     const oddsStr=b.odds?(b.odds>0?"+":"")+b.odds:"—";
     const stakeStr=b.stake?"$"+parseFloat(b.stake).toFixed(2):"—";
     const payoutStr=b.payout&&parseFloat(b.payout)>0?"$"+parseFloat(b.payout).toFixed(2):"—";
-    return`<tr class="${rc} bet-main-row" id="row-${uid}" onclick="toggleBetDetail('${uid}')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(255,255,255,0.05)">
-      <td>
-        <div style="display:flex;align-items:center;gap:7px;pointer-events:none">
-          <span id="icon-${uid}" style="color:#52525b;font-size:0.65rem;transition:transform 0.2s;display:inline-block;flex-shrink:0">▶</span>
-          <div>
-            <div class="desc-main">${b.description||"—"}</div>
-            <div class="desc-sub">${b.bettors?.name||""} · ${b.sport||""} · ${b.bet_date||""}</div>
-          </div>
-        </div>
-      </td>
-      <td class="hm"><span class="badge badge-${b.bet_type||"straight"}">${b.bet_type||"—"}</span></td>
-      <td><span class="badge badge-${b.result||"pending"}">${b.result||"pending"}</span></td>
-      <td class="hm" style="color:#52525b;font-weight:600">${oddsStr}</td>
-      <td>${pnlStr}</td>
-      <td class="hm" style="color:#52525b;font-size:0.72rem">${b.bet_date||"—"}</td>
-    </tr>
-    <tr id="detail-${uid}" style="display:none">
-      <td colspan="6" style="padding:0 0 0 0;border-bottom:1px solid var(--border)">
-        <div class="bet-detail-panel">
-          <div class="bet-detail-grid">
-            <div class="bet-detail-item"><span class="bet-detail-label">Sportsbook</span><span class="bet-detail-val">${b.sportsbook||"—"}</span></div>
-            <div class="bet-detail-item"><span class="bet-detail-label">Bet type</span><span class="bet-detail-val"><span class="badge badge-${b.bet_type||"straight"}">${b.bet_type||"—"}</span></span></div>
-            <div class="bet-detail-item"><span class="bet-detail-label">Odds</span><span class="bet-detail-val">${oddsStr}</span></div>
-            <div class="bet-detail-item"><span class="bet-detail-label">Stake</span><span class="bet-detail-val">${stakeStr}</span></div>
-            <div class="bet-detail-item"><span class="bet-detail-label">Payout</span><span class="bet-detail-val">${payoutStr}</span></div>
-            <div class="bet-detail-item"><span class="bet-detail-label">Date</span><span class="bet-detail-val">${b.bet_date||"—"}</span></div>
+    return`<tr class="${rc}" style="cursor:pointer" onclick="this.querySelector('.bet-detail-panel').style.display=this.querySelector('.bet-detail-panel').style.display==='block'?'none':'block';this.querySelector('.expand-icon').style.transform=this.querySelector('.bet-detail-panel').style.display==='block'?'rotate(90deg)':'rotate(0deg)'">
+      <td colspan="5" style="padding:0">
+        <div style="display:flex;align-items:stretch">
+          <div style="width:4px;flex-shrink:0;background:${b.result==='win'?'var(--green)':b.result==='loss'?'var(--red)':b.result==='pending'?'var(--amber)':'var(--border)'}"></div>
+          <div style="flex:1;padding:10px 12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <div style="display:flex;align-items:center;gap:7px;min-width:0">
+                <span class="expand-icon" style="color:#52525b;font-size:0.6rem;flex-shrink:0;transition:transform 0.2s;display:inline-block">▶</span>
+                <div style="min-width:0">
+                  <div class="desc-main" style="white-space:normal">${b.description||"—"}</div>
+                  <div class="desc-sub">${b.bettors?.name||""} · ${b.sport||""} · ${b.bet_date||""}</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                <span class="badge badge-${b.result||"pending"}">${b.result||"pending"}</span>
+                <div style="min-width:52px;text-align:right">${pnlStr}</div>
+              </div>
+            </div>
+            <div class="bet-detail-panel" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+              <div class="bet-detail-grid">
+                <div class="bet-detail-item"><span class="bet-detail-label">Sportsbook</span><span class="bet-detail-val">${b.sportsbook||"—"}</span></div>
+                <div class="bet-detail-item"><span class="bet-detail-label">Bet type</span><span class="bet-detail-val"><span class="badge badge-${b.bet_type||"straight"}">${b.bet_type||"—"}</span></span></div>
+                <div class="bet-detail-item"><span class="bet-detail-label">Odds</span><span class="bet-detail-val">${oddsStr}</span></div>
+                <div class="bet-detail-item"><span class="bet-detail-label">Stake</span><span class="bet-detail-val">${stakeStr}</span></div>
+                <div class="bet-detail-item"><span class="bet-detail-label">Payout</span><span class="bet-detail-val">${payoutStr}</span></div>
+                <div class="bet-detail-item"><span class="bet-detail-label">Date</span><span class="bet-detail-val">${b.bet_date||"—"}</span></div>
+              </div>
+            </div>
           </div>
         </div>
       </td>
