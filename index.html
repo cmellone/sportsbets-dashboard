@@ -144,6 +144,12 @@ select:focus,input:focus{border-color:var(--border2)}
 .pnl-neg{color:var(--red);font-weight:700}
 .sort-icon{opacity:0.3;font-size:0.6rem;margin-left:3px}
 .sort-icon.on{opacity:1}
+.bet-detail-panel{padding:0.875rem 1.25rem 1rem;background:rgba(255,255,255,0.02);border-top:1px solid var(--border)}
+.bet-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px}
+.bet-detail-item{display:flex;flex-direction:column;gap:3px}
+.bet-detail-label{font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600}
+.bet-detail-val{font-size:0.82rem;color:var(--text);font-weight:500}
+@media(max-width:640px){.bet-detail-grid{grid-template-columns:repeat(2,1fr)}}
 
 /* ADD BET */
 .form-section-title{font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:1.25rem 0 0.75rem;padding-top:1rem;border-top:1px solid var(--border)}
@@ -538,14 +544,39 @@ function renderBets(){
     const pnlAbs=pnl!==null?Math.abs(pnl):null;
     const pnlStr=pnl!==null?(pnl>0?`<span class="pnl-pos">+$${pnlAbs.toFixed(2)}</span>`:pnl<0?`<span class="pnl-neg">-$${pnlAbs.toFixed(2)}</span>`:`<span style="color:#52525b">$0.00</span>`):`<span style="color:#3f3f46">—</span>`;
     const rc=b.result==="win"?"tr-win":b.result==="loss"?"tr-loss":b.result==="pending"?"tr-pending":"";
-    return`<tr class="${rc}">
-      <td><div class="desc-main">${b.description||"—"}</div><div class="desc-sub">${b.bettors?.name||""} · ${b.sport||""}</div></td>
+    const uid=b.id||Math.random().toString(36).slice(2);
+    const oddsStr=b.odds?(b.odds>0?"+":"")+b.odds:"—";
+    const stakeStr=b.stake?"$"+parseFloat(b.stake).toFixed(2):"—";
+    const payoutStr=b.payout&&parseFloat(b.payout)>0?"$"+parseFloat(b.payout).toFixed(2):"—";
+    return`<tr class="${rc} bet-main-row" onclick="toggleBetDetail('${uid}')" style="cursor:pointer">
+      <td>
+        <div style="display:flex;align-items:center;gap:7px">
+          <span id="icon-${uid}" style="color:#52525b;font-size:0.65rem;transition:transform 0.2s;display:inline-block;flex-shrink:0">▶</span>
+          <div>
+            <div class="desc-main">${b.description||"—"}</div>
+            <div class="desc-sub">${b.bettors?.name||""} · ${b.sport||""} · ${b.bet_date||""}</div>
+          </div>
+        </div>
+      </td>
       <td class="hm"><span class="badge badge-${b.bet_type||"straight"}">${b.bet_type||"—"}</span></td>
       <td><span class="badge badge-${b.result||"pending"}">${b.result||"pending"}</span></td>
-      <td class="hm" style="color:#52525b;font-weight:600">${b.odds?(b.odds>0?"+":"")+b.odds:"—"}</td>
-      
+      <td class="hm" style="color:#52525b;font-weight:600">${oddsStr}</td>
       <td>${pnlStr}</td>
       <td class="hm" style="color:#52525b;font-size:0.72rem">${b.bet_date||"—"}</td>
+    </tr>
+    <tr id="detail-${uid}" style="display:none">
+      <td colspan="6" style="padding:0 0 0 0;border-bottom:1px solid var(--border)">
+        <div class="bet-detail-panel">
+          <div class="bet-detail-grid">
+            <div class="bet-detail-item"><span class="bet-detail-label">Sportsbook</span><span class="bet-detail-val">${b.sportsbook||"—"}</span></div>
+            <div class="bet-detail-item"><span class="bet-detail-label">Bet type</span><span class="bet-detail-val"><span class="badge badge-${b.bet_type||"straight"}">${b.bet_type||"—"}</span></span></div>
+            <div class="bet-detail-item"><span class="bet-detail-label">Odds</span><span class="bet-detail-val">${oddsStr}</span></div>
+            <div class="bet-detail-item"><span class="bet-detail-label">Stake</span><span class="bet-detail-val">${stakeStr}</span></div>
+            <div class="bet-detail-item"><span class="bet-detail-label">Payout</span><span class="bet-detail-val">${payoutStr}</span></div>
+            <div class="bet-detail-item"><span class="bet-detail-label">Date</span><span class="bet-detail-val">${b.bet_date||"—"}</span></div>
+          </div>
+        </div>
+      </td>
     </tr>`;
   }).join("");
 }
@@ -598,7 +629,16 @@ document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState==="visible") fetchAll();
 });
 window.addEventListener("pageshow",(e)=>{
-  if(e.persisted) fetchAll();
+  if(e.persisted) function toggleBetDetail(uid){
+  const detail=document.getElementById("detail-"+uid);
+  const icon=document.getElementById("icon-"+uid);
+  if(!detail)return;
+  const isOpen=detail.style.display!=="none";
+  detail.style.display=isOpen?"none":"table-row";
+  if(icon)icon.style.transform=isOpen?"":"rotate(90deg)";
+}
+
+fetchAll();
 });
 </script>
 </body>
