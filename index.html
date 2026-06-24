@@ -544,13 +544,13 @@ function renderBets(){
     const pnlAbs=pnl!==null?Math.abs(pnl):null;
     const pnlStr=pnl!==null?(pnl>0?`<span class="pnl-pos">+$${pnlAbs.toFixed(2)}</span>`:pnl<0?`<span class="pnl-neg">-$${pnlAbs.toFixed(2)}</span>`:`<span style="color:#52525b">$0.00</span>`):`<span style="color:#3f3f46">—</span>`;
     const rc=b.result==="win"?"tr-win":b.result==="loss"?"tr-loss":b.result==="pending"?"tr-pending":"";
-    const uid=b.id||Math.random().toString(36).slice(2);
+    const uid=(b.id||Math.random().toString(36).slice(2)).replace(/-/g,'');
     const oddsStr=b.odds?(b.odds>0?"+":"")+b.odds:"—";
     const stakeStr=b.stake?"$"+parseFloat(b.stake).toFixed(2):"—";
     const payoutStr=b.payout&&parseFloat(b.payout)>0?"$"+parseFloat(b.payout).toFixed(2):"—";
-    return`<tr class="${rc} bet-main-row" onclick="toggleBetDetail('${uid}')" style="cursor:pointer">
+    return`<tr class="${rc} bet-main-row" id="row-${uid}" onclick="toggleBetDetail('${uid}')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(255,255,255,0.05)">
       <td>
-        <div style="display:flex;align-items:center;gap:7px">
+        <div style="display:flex;align-items:center;gap:7px;pointer-events:none">
           <span id="icon-${uid}" style="color:#52525b;font-size:0.65rem;transition:transform 0.2s;display:inline-block;flex-shrink:0">▶</span>
           <div>
             <div class="desc-main">${b.description||"—"}</div>
@@ -630,12 +630,14 @@ document.addEventListener("visibilitychange",()=>{
 });
 window.addEventListener("pageshow",(e)=>{
   if(e.persisted) function toggleBetDetail(uid){
-  const detail=document.getElementById("detail-"+uid);
-  const icon=document.getElementById("icon-"+uid);
-  if(!detail)return;
-  const isOpen=detail.style.display!=="none";
-  detail.style.display=isOpen?"none":"table-row";
-  if(icon)icon.style.transform=isOpen?"":"rotate(90deg)";
+  try{
+    const detail=document.getElementById("detail-"+uid);
+    const icon=document.getElementById("icon-"+uid);
+    if(!detail){console.log("no detail for",uid);return;}
+    const isOpen=detail.style.display==="table-row";
+    detail.style.display=isOpen?"none":"table-row";
+    if(icon)icon.style.transform=isOpen?"rotate(0deg)":"rotate(90deg)";
+  }catch(e){console.error(e);}
 }
 
 fetchAll();
