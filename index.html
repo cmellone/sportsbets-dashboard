@@ -144,6 +144,32 @@ select:focus,input:focus{border-color:var(--border2)}
 .pnl-neg{color:var(--red);font-weight:700}
 .sort-icon{opacity:0.3;font-size:0.6rem;margin-left:3px}
 .sort-icon.on{opacity:1}
+.filter-fab{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:99px;cursor:pointer;font-size:0.76rem;font-weight:600;color:var(--muted2);transition:all 0.2s;font-family:var(--font)}
+.filter-fab:hover{border-color:var(--gold);color:var(--gold)}
+.filter-fab-badge{background:var(--gold);color:#000;border-radius:99px;font-size:0.6rem;font-weight:800;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:200;opacity:0;pointer-events:none;transition:opacity 0.25s;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.drawer-overlay.open{opacity:1;pointer-events:all}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(300px,88vw);background:#111;border-left:1px solid var(--border);z-index:201;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem;border-bottom:1px solid var(--border);flex-shrink:0}
+.drawer-title{font-size:0.95rem;font-weight:700;color:var(--text)}
+.drawer-close{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--muted2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;transition:all 0.15s;font-family:var(--font)}
+.drawer-close:hover{color:var(--text)}
+.drawer-body{flex:1;overflow-y:auto;padding:1.25rem}
+.drawer-section{margin-bottom:1.5rem}
+.drawer-section-label{font-size:0.62rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.6rem}
+.drawer-pills{display:flex;flex-wrap:wrap;gap:6px}
+.drawer-pill{padding:6px 12px;border-radius:99px;border:1px solid var(--border2);background:transparent;font-size:0.75rem;font-weight:600;color:var(--muted2);cursor:pointer;transition:all 0.15s;font-family:var(--font)}
+.drawer-pill:hover{color:var(--text)}
+.drawer-pill.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
+.drawer-pill.bettor-pill.active{background:rgba(96,165,250,0.12);border-color:var(--blue);color:var(--blue)}
+.drawer-footer{padding:1rem 1.25rem;border-top:1px solid var(--border);flex-shrink:0}
+.drawer-reset{width:100%;padding:9px;border-radius:10px;border:1px solid var(--border2);background:transparent;color:var(--muted2);font-size:0.8rem;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s}
+.drawer-reset:hover{color:var(--text);border-color:var(--border2)}
+.active-filter-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem;min-height:0}
+.active-filter-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 10px;border-radius:99px;background:var(--gold-dim);border:1px solid rgba(212,175,55,0.4);font-size:0.68rem;font-weight:600;color:var(--gold)}
+.active-filter-pill button{background:none;border:none;color:var(--gold);cursor:pointer;font-size:0.7rem;padding:0;opacity:0.7;line-height:1}
+.active-filter-pill button:hover{opacity:1}
 .bet-detail-panel{padding:0.875rem 1.25rem 1rem;background:rgba(255,255,255,0.02);border-top:1px solid var(--border)}
 .bet-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px}
 .bet-detail-item{display:flex;flex-direction:column;gap:3px}
@@ -212,8 +238,13 @@ textarea:focus{border-color:var(--border2)}
   <div id="overview-loading" class="loading">Loading House of Mellone...</div>
   <div id="overview-content" style="display:none">
 
-    <div class="sport-scroll" id="bettor-filter">
-      <button class="sport-pill active" onclick="setBettorFilter(null,this)">🏠 Group</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;gap:10px">
+      <div class="active-filter-pills" id="active-filter-pills"></div>
+      <button class="filter-fab" onclick="openDrawer()" style="flex-shrink:0">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+        Filters
+        <span class="filter-fab-badge" id="filter-badge" style="display:none">0</span>
+      </button>
     </div>
 
     <div class="metric-grid" id="group-metrics"></div>
@@ -308,7 +339,8 @@ const SUPA_URL="https://wvgkeurfzgrtvxusaoha.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2Z2tldXJmemdydHZ4dXNhb2hhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNzI5NzQsImV4cCI6MjA5Nzc0ODk3NH0.v_xx8mhw_6h7RHm0i0ey2HI-1JSDPpne9UDKjt9DRRQ";
 const H={"apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY,"Content-Type":"application/json"};
 const AV=[["#0f2a1a","#22c55e"],["#0f1a2e","#3b82f6"],["#1f0f2e","#8b5cf6"],["#2e0f0f","#ef4444"]];
-let bettors=[],bets=[],pnlC=null,trendC=null,activeBettor=null,sortCol="bet_date",sortDir=-1;
+let bettors=[],bets=[],pnlC=null,trendC=null,sortCol="bet_date",sortDir=-1;
+let fBettor=null,fTime="all",fSport="all";
 
 async function fetchAll(){
   const[bR,betR]=await Promise.all([
@@ -337,39 +369,101 @@ function calcStats(s){
   return{w,l,p:p,pend,pnl,roi,wr,total:s.length,settled,staked,sk,st};
 }
 
-function getF(){return activeBettor?bets.filter(b=>b.bettor_id===activeBettor):bets;}
+function getF(){
+  const now=new Date();
+  return bets.filter(b=>{
+    if(fBettor&&b.bettor_id!==fBettor)return false;
+    if(fSport&&fSport!=="all"&&b.sport!==fSport)return false;
+    if(fTime&&fTime!=="all"){
+      const cutoff=new Date(now.getTime()-parseInt(fTime)*86400000);
+      if(new Date(b.bet_date)<cutoff)return false;
+    }
+    return true;
+  });
+}
 
 function populateFilters(){
-  const fb=document.getElementById("f-bettor"),ab=document.getElementById("a-bettor"),bf=document.getElementById("bettor-filter");
-  // Clear existing options/buttons before repopulating to prevent duplicates on refresh
+  const fb=document.getElementById("f-bettor"),ab=document.getElementById("a-bettor");
   fb.innerHTML="<option value=''>All bettors</option>";
   ab.innerHTML="";
-  bf.innerHTML=`<button class="sport-pill ${!activeBettor?'active':''}" onclick="setBettorFilter(null,this)">🏠 Group</button>`;
+  const db=document.getElementById("drawer-bettors");
+  if(db)db.innerHTML=`<button class="drawer-pill bettor-pill ${!fBettor?'active':''}" onclick="setDrawerFilter('bettor',null,this)">🏠 Group</button>`;
   bettors.forEach(b=>{
     fb.innerHTML+=`<option value="${b.id}">${b.name}</option>`;
     ab.innerHTML+=`<option value="${b.id}">${b.name}</option>`;
-    bf.innerHTML+=`<button class="sport-pill ${activeBettor===b.id?'active':''}" onclick="setBettorFilter('${b.id}',this)">${b.name}</button>`;
+    if(db)db.innerHTML+=`<button class="drawer-pill bettor-pill ${fBettor===b.id?'active':''}" onclick="setDrawerFilter('bettor','${b.id}',this)">${b.name}</button>`;
   });
   const sp=[...new Set(bets.map(b=>b.sport).filter(Boolean))].sort();
   const fs=document.getElementById("f-sport");
   const curSport=fs.value;
   fs.innerHTML="<option value=''>All sports</option>";
   sp.forEach(s=>fs.innerHTML+=`<option${s===curSport?" selected":""}>${s}</option>`);
+  const ds=document.getElementById("drawer-sports");
+  if(ds){
+    ds.innerHTML=`<button class="drawer-pill ${fSport==="all"?"active":""}" onclick="setDrawerFilter('sport','all',this)">All sports</button>`;
+    sp.forEach(s=>ds.innerHTML+=`<button class="drawer-pill ${fSport===s?"active":""}" onclick="setDrawerFilter('sport','${s}',this)">${s}</button>`);
+  }
   document.getElementById("a-date").value=new Date().toISOString().split("T")[0];
 }
 
-function setBettorFilter(id,el){
-  activeBettor=id;
-  document.querySelectorAll(".sport-pill").forEach(b=>b.classList.remove("active"));
+function setDrawerFilter(type,val,el){
+  if(type==="bettor")fBettor=val;
+  else if(type==="time")fTime=val||"all";
+  else if(type==="sport")fSport=val||"all";
+  el.closest(".drawer-pills").querySelectorAll(".drawer-pill").forEach(b=>b.classList.remove("active"));
   el.classList.add("active");
+  updateBadge();
   renderOverview();
+}
+
+function updateBadge(){
+  let n=0;
+  if(fBettor)n++;
+  if(fTime&&fTime!=="all")n++;
+  if(fSport&&fSport!=="all")n++;
+  const badge=document.getElementById("filter-badge");
+  badge.style.display=n?"flex":"none";
+  badge.textContent=n;
+  const map={1:"Today",7:"This week",30:"This month"};
+  const pills=[];
+  if(fBettor){const b=bettors.find(x=>x.id===fBettor);if(b)pills.push(`<span class="active-filter-pill">${b.name}<button onclick="clearF('bettor')">✕</button></span>`);}
+  if(fTime&&fTime!=="all")pills.push(`<span class="active-filter-pill">${map[fTime]||fTime}<button onclick="clearF('time')">✕</button></span>`);
+  if(fSport&&fSport!=="all")pills.push(`<span class="active-filter-pill">${fSport}<button onclick="clearF('sport')">✕</button></span>`);
+  document.getElementById("active-filter-pills").innerHTML=pills.join("");
+}
+
+function clearF(type){
+  if(type==="bettor"){fBettor=null;document.querySelectorAll("#drawer-bettors .drawer-pill").forEach((b,i)=>b.classList.toggle("active",i===0));}
+  if(type==="time"){fTime="all";document.querySelectorAll("#drawer-time .drawer-pill").forEach((b,i)=>b.classList.toggle("active",i===0));}
+  if(type==="sport"){fSport="all";document.querySelectorAll("#drawer-sports .drawer-pill").forEach((b,i)=>b.classList.toggle("active",i===0));}
+  updateBadge();renderOverview();
+}
+
+function resetDrawerFilters(){
+  fBettor=null;fTime="all";fSport="all";
+  document.querySelectorAll("#drawer-bettors .drawer-pill").forEach((b,i)=>b.classList.toggle("active",i===0));
+  document.querySelectorAll("#drawer-time .drawer-pill").forEach((b,i)=>b.classList.toggle("active",i===0));
+  document.querySelectorAll("#drawer-sports .drawer-pill").forEach((b,i)=>b.classList.toggle("active",i===0));
+  updateBadge();renderOverview();closeDrawer();
+}
+
+function openDrawer(){
+  document.getElementById("filter-drawer").classList.add("open");
+  document.getElementById("drawer-overlay").classList.add("open");
+  document.body.style.overflow="hidden";
+}
+
+function closeDrawer(){
+  document.getElementById("filter-drawer").classList.remove("open");
+  document.getElementById("drawer-overlay").classList.remove("open");
+  document.body.style.overflow="";
 }
 
 function renderOverview(){
   const f=getF(),s=calcStats(f);
   document.getElementById("group-metrics").innerHTML=`
     <div class="metric"><div class="metric-label">Total bets</div><div class="metric-value">${s.total}</div><div class="metric-sub">${s.settled} settled · ${s.pend} pending</div></div>
-    <div class="metric"><div class="metric-label">${activeBettor?"P&L":"Group P&L"}</div><div class="metric-value ${s.pnl>=0?"c-green":"c-red"}">${s.pnl>=0?"+":""}$${Math.abs(s.pnl).toFixed(2)}</div><div class="metric-sub">ROI ${s.roi>=0?"+":""}${s.roi.toFixed(1)}%</div></div>
+    <div class="metric"><div class="metric-label">${fBettor?"P&L":"Group P&L"}</div><div class="metric-value ${s.pnl>=0?"c-green":"c-red"}">${s.pnl>=0?"+":""}$${Math.abs(s.pnl).toFixed(2)}</div><div class="metric-sub">ROI ${s.roi>=0?"+":""}${s.roi.toFixed(1)}%</div></div>
     <div class="metric"><div class="metric-label">Win rate</div><div class="metric-value">${s.wr}%</div><div class="metric-sub">${s.w}W – ${s.l}L${s.p?" – "+s.p+"P":""}</div></div>
     <div class="metric"><div class="metric-label">Current streak</div><div class="metric-value ${s.st==="win"?"c-green":s.st==="loss"?"c-red":"c-amber"}">${s.sk?s.sk+(s.st==="win"?"W":"L"):"—"}</div><div class="metric-sub">${s.sk>=3?"🔥 On fire":s.sk>=2?"Building momentum":"Keep grinding"}</div></div>
   `;
@@ -463,7 +557,7 @@ function renderTrend(f){
     return(a.id||"").localeCompare(b.id||"");
   });
   const lines={};
-  if(activeBettor){const b=bettors.find(x=>x.id===activeBettor);lines[b.id]={name:b.name,data:[],cum:0};}
+  if(fBettor){const b=bettors.find(x=>x.id===fBettor);if(b)lines[b.id]={name:b.name,data:[],cum:0};}
   else bettors.forEach(b=>lines[b.id]={name:b.name,data:[],cum:0});
   sorted.forEach(bet=>{
     const bl=lines[bet.bettor_id];if(!bl)return;
@@ -640,5 +734,39 @@ window.addEventListener("pageshow",(e)=>{
 fetchAll();
 });
 </script>
+<!-- FILTER DRAWER -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="filter-drawer">
+  <div class="drawer-header">
+    <span class="drawer-title">Filters</span>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-section">
+      <div class="drawer-section-label">Bettor</div>
+      <div class="drawer-pills" id="drawer-bettors">
+        <button class="drawer-pill bettor-pill active" onclick="setDrawerFilter('bettor',null,this)">🏠 Group</button>
+      </div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-label">Time range</div>
+      <div class="drawer-pills" id="drawer-time">
+        <button class="drawer-pill active" onclick="setDrawerFilter('time','all',this)">All time</button>
+        <button class="drawer-pill" onclick="setDrawerFilter('time','1',this)">Today</button>
+        <button class="drawer-pill" onclick="setDrawerFilter('time','7',this)">This week</button>
+        <button class="drawer-pill" onclick="setDrawerFilter('time','30',this)">This month</button>
+      </div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-label">Sport</div>
+      <div class="drawer-pills" id="drawer-sports">
+        <button class="drawer-pill active" onclick="setDrawerFilter('sport','all',this)">All sports</button>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="drawer-reset" onclick="resetDrawerFilters()">Reset all filters</button>
+  </div>
+</div>
 </body>
 </html>
